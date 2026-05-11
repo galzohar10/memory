@@ -274,15 +274,17 @@ const App = () => {
                         </div>
                     )}
                     {win.type === 'GOOGLE' && (
-                        <div style={{ position: 'relative', display: 'inline-block' }}>
-                            <img src="/google.png" alt="Google" style={{ display: 'block' }} />
-                            <input 
-                                type="text" 
-                                className="google-search-input"
-                                value={googleSearch}
-                                onChange={(e) => setGoogleSearch(e.target.value)}
-                                autoFocus
-                            />
+                        <div className="google-content-wrapper">
+                            <div className="google-image-container">
+                                <img src="/google.png" alt="Google" />
+                                <input 
+                                    type="text" 
+                                    className="google-search-input"
+                                    value={googleSearch}
+                                    onChange={(e) => setGoogleSearch(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
                         </div>
                     )}
                 </DraggableWindow>

@@ -553,13 +553,32 @@ a {
     justify-content: center;
     align-items: center;
     width: 100%;
-    height: auto;
+    flex: 1; /* Allow it to grow when window is maximized */
 }
 
-.google-window .xp-content img {
+.google-content-wrapper {
+    position: relative;
     width: 100%;
-    height: auto;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.google-image-container {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.google-image-container img {
     display: block;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
 }
 
 /* Maximized States */
@@ -567,18 +586,22 @@ a {
     border-radius: 0;
     border: none;
     box-shadow: none;
+    max-width: none !important;
+    max-height: none !important;
 }
 
 .xp-window.maximized .xp-content {
     flex: 1;
     max-height: none !important;
+    padding: 0;
 }
 
-.google-window.maximized .xp-content img {
-    width: auto;
-    height: 100%;
-    max-width: 100%;
-    object-fit: contain;
+.google-window.maximized .google-content-wrapper {
+    background: #fff;
+}
+
+.google-window.maximized .google-image-container {
+    /* Container will scale with image due to inline-block and max-width/height */
 }
 
 .google-search-input {

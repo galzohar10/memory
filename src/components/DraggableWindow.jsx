@@ -80,10 +80,10 @@ const DraggableWindow = ({ title, children, x, y, width, height, zIndex, onClose
             style={{
                 left: isMaximized ? 0 : `${pos.x}px`,
                 top: isMaximized ? 0 : `${pos.y}px`,
-                width: isMaximized ? '100vw' : (width || 'auto'),
-                height: isMaximized ? '100vh' : (height || 'auto'),
-                zIndex: isMaximized ? 20000 : zIndex,
-                position: isMaximized ? 'fixed' : 'absolute',
+                width: isMaximized ? '100%' : (width || 'auto'),
+                height: isMaximized ? 'calc(100vh - 40px)' : (height || 'auto'),
+                zIndex: isMaximized ? 9999 : zIndex,
+                position: 'absolute',
             }}
             onMouseDown={() => onFocus?.()}
         >

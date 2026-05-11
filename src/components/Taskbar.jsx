@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 const Taskbar = ({ windows, onWindowClick, onCloseWindow }) => {
     return (
