@@ -38,9 +38,11 @@ const App = () => {
 
     const [googleSearch, setGoogleSearch] = useState('');
     const [capturedImage, setCapturedImage] = useState(null);
-    const [isPhotoDeleted, setIsPhotoDeleted] = useState(false);
+    const [deletedPhotos, setDeletedPhotos] = useState([]);
+    const [restoredToDesktop, setRestoredToDesktop] = useState([]);
+    const [selectedRecyclePhoto, setSelectedRecyclePhoto] = useState(null);
     const [isPhotoRestored, setIsPhotoRestored] = useState(false);
-    const [isBackgroundSet, setIsBackgroundSet] = useState(false);
+    const [desktopBackground, setDesktopBackground] = useState(null);
     const [zIndexCounter, setZIndexCounter] = useState(100);
     const [isLoading, setIsLoading] = useState(true);
     useEffect(() => {
@@ -89,7 +91,7 @@ const App = () => {
         }
     };
 
-    const handleIconClick = (icon) => {
+    const handleIconClick = (icon, data) => {
         if (icon === 'photos' && step === 'INSTRUCTION') {
             closeWindow('instruction-alert');
             nextStep('PHOTOS', { title: 'תמונות 2010', type: 'PHOTOS', width: '320px' });
@@ -98,7 +100,8 @@ const App = () => {
         } else if (icon === 'recycle') {
             addWindow({ title: 'סל המיחזור', type: 'RECYCLE', width: '320px' });
         } else if (icon === 'restored') {
-            addWindow({ title: 'שחזור קובץ', type: 'SET_BG', width: '300px' });
+            addWindow({ title: data.caption || data.name || 'preview', type: 'PREVIEW', content: data.src });
+            return;
         } else if (icon === 'icq') {
             new Audio('/Icq old sound.mp3').play().catch(() => {});
             addWindow({ title: 'ICQ', type: 'ICQ_FULL', width: '600px' });
@@ -120,7 +123,19 @@ const App = () => {
     }
 
     return (
-        <Desktop onIconClick={handleIconClick} showRestored={isPhotoRestored} restoredImage={capturedImage} background={isBackgroundSet ? capturedImage : null}>
+        <Desktop 
+            onIconClick={handleIconClick} 
+            restoredToDesktop={restoredToDesktop} 
+            background={desktopBackground}
+            onSetWallpaper={(photo) => {
+                setDesktopBackground(photo.src);
+                if (photo.isTarget && step === 'RESTORE_TASK') {
+                    const infoWin = openWindows.find(w => w.type === 'INFO' && typeof w.content === 'string' && w.content.includes('כמסך הבית'));
+                    if (infoWin) closeWindow(infoWin.id);
+                    nextStep('PROGRESS', { title: 'טוען נתונים', type: 'PROGRESS' });
+                }
+            }}
+        >
             {openWindows.map(win => (
                 <DraggableWindow 
                     key={win.id} 
@@ -200,12 +215,30 @@ const App = () => {
                     {win.type === 'PHOTOS' && (
                         <PhotosFolderStep 
                             capturedImage={capturedImage} 
+                            deletedPhotos={deletedPhotos}
+                            restoredToDesktop={restoredToDesktop}
+                            isDeleteTask={step === 'INSTRUCTION'}
                             onDeleteSuccess={() => {
-                                setIsPhotoDeleted(true);
                                 closeWindow(win.id);
                                 nextStep('MOVING_BUTTON', { title: 'בדיקת זיכרון', type: 'MOVING_BUTTON', width: '350px' });
                             }} 
+                            onDelete={(photo) => {
+                                setDeletedPhotos(prev => [...prev, photo]);
+                                if (photo.isTarget) setIsPhotoRestored(false);
+                            }}
+                            onPreview={(src, name) => {
+                                addWindow({ title: name, type: 'PREVIEW', content: src, width: '400px' });
+                            }}
+                            onDropBack={(photo) => {
+                                setRestoredToDesktop(prev => prev.filter(p => p.src !== photo.src));
+                            }}
                             onAlert={(msg) => addWindow({ title: 'שגיאה', type: 'ALERT', content: msg })}
+                            onSetWallpaper={(photo) => {
+                                setDesktopBackground(photo.src);
+                                if (photo.isTarget && step === 'RESTORE_TASK') {
+                                    nextStep('FINAL', { title: 'סיום', type: 'FINAL', width: '400px' });
+                                }
+                            }}
                         />
                     )}
                     {win.type === 'MOVING_BUTTON' && (
@@ -228,20 +261,57 @@ const App = () => {
                         <FinalStep />
                     )}
                     {win.type === 'RECYCLE' && (
-                        <div style={{ textAlign: 'center' }}>
-                            {isPhotoDeleted && !isPhotoRestored ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                                    <div className="icon-img icon-photos" style={{ width: '48px', height: '48px', backgroundImage: `url(${capturedImage})`, backgroundSize: 'cover' }}></div>
-                                    <p>captured_photo.jpg</p>
-                                    <button onClick={() => {
-                                        setIsPhotoRestored(true);
-                                        closeWindow(win.id);
-                                        closeWindow('restore-alert');
-                                        addWindow({ title: 'מערכת', type: 'INFO', content: 'הגדר את התמונה כמסך הבית.' });
-                                    }}>שחזר</button>
+                        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '150px' }}>
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
+                                {deletedPhotos.length > 0 ? (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+                                        {deletedPhotos.map((photo, idx) => (
+                                            <div 
+                                                key={idx} 
+                                                style={{ 
+                                                    display: 'flex', 
+                                                    flexDirection: 'column', 
+                                                    alignItems: 'center', 
+                                                    gap: '5px',
+                                                    padding: '5px',
+                                                    border: selectedRecyclePhoto === photo ? '1px solid #0055e5' : '1px solid transparent',
+                                                    backgroundColor: selectedRecyclePhoto === photo ? 'rgba(0, 85, 229, 0.1)' : 'transparent',
+                                                    cursor: 'pointer'
+                                                }}
+                                                onClick={() => setSelectedRecyclePhoto(photo)}
+                                            >
+                                                <div className="icon-img icon-photos" style={{ 
+                                                    width: '80px', 
+                                                    height: '80px', 
+                                                    backgroundImage: `url(${photo.src})`, 
+                                                    backgroundSize: 'cover',
+                                                    border: '1px solid #fff' 
+                                                }}></div>
+                                                <p style={{ fontSize: '10px', margin: 0 }}>{photo.caption || photo.name || 'photo.jpg'}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p style={{ textAlign: 'center' }}>סל המיחזור ריק.</p>
+                                )}
+                            </div>
+                            {selectedRecyclePhoto && (
+                                <div style={{ padding: '10px', borderTop: '1px solid #ccc', textAlign: 'center', backgroundColor: 'transparent' }}>
+                                    <button 
+                                        onClick={() => {
+                                            const photo = selectedRecyclePhoto;
+                                            setDeletedPhotos(prev => prev.filter(p => p.src !== photo.src));
+                                            setRestoredToDesktop(prev => [...prev, photo]);
+                                            
+                                            if (photo.isTarget) {
+                                                setIsPhotoRestored(true);
+                                                closeWindow('restore-alert');
+                                                addWindow({ title: 'מערכת', type: 'INFO', content: 'הגדר את התמונה כמסך הבית.' });
+                                            }
+                                            setSelectedRecyclePhoto(null);
+                                        }}
+                                    >שחזור</button>
                                 </div>
-                            ) : (
-                                <p>סל המיחזור ריק.</p>
                             )}
                         </div>
                     )}
@@ -285,6 +355,11 @@ const App = () => {
                                     autoFocus
                                 />
                             </div>
+                        </div>
+                    )}
+                    {win.type === 'PREVIEW' && (
+                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#000', width: '100%', height: '100%' }}>
+                            <img src={win.content} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} alt="Preview" />
                         </div>
                     )}
                 </DraggableWindow>
